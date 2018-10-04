@@ -81,7 +81,15 @@ class NalandaSession:
             forum_links = self.__filter_links_on_page__(self.NALANDA_COURSE_URL, '/mod/forum/view.php', parameters)
             for forum_link in forum_links:
                 attachment_urls.update(self.__get_attachments_from_forum(forum_link))
-        return attachment_urls
+        # return attachment_urls
+        filenames_to_attachment_urls = {}
+        for folder_name in attachment_urls:
+            for attachment_url in attachment_urls[folder_name]:
+                filename = self.get_download_attachment_filename(attachment_url)
+                if filename:
+                    path_to_file = '{}/{}'.format(folder_name, filename)
+                    filenames_to_attachment_urls[path_to_file] = attachment_url
+        return filenames_to_attachment_urls
 
     def __filter_links_on_page__(self, page_link, filter_string, params=None):
         # This function obtains all links in the given page_link using a GET request with given parameters
@@ -113,6 +121,13 @@ class NalandaSession:
             if attachment_links:
                 attachment_urls[discussion_links_to_titles[discussion_link]] = attachment_links
         return attachment_urls
+
+    def get_download_attachment_filename(self, attachment_url):
+        r = self.session.head(attachment_url, allow_redirects=True)
+        if 'Content-Disposition' in r.headers:
+            filename = re.findall("filename=(.+)", r.headers['Content-Disposition'])[0].replace('"', '')
+            return filename
+        return None
 
     def download_attachment(self, attachment_url, filepath=None):
         """Saves the attachment pointed by url to a file in the specified directory"""

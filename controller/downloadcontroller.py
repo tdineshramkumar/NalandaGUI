@@ -1,6 +1,10 @@
 import threading
 from view.nalandadownloader import NalandaDownloader
 from model.nalanda import NalandaSession
+from os.path import dirname
+from concurrent.futures import ThreadPoolExecutor
+
+MAX_DOWNLOAD_WORKERS = 5
 
 
 class NalandaDownloaderController:
@@ -16,7 +20,7 @@ class NalandaDownloaderController:
         self.nalanda_downloader.start_mainloop()
         self.courses = None
         self.downloads = None   # A Dictionary
-        self.downloads_folders = None   # The Dictionary Keys
+        self.downloads_files = None   # The Dictionary Keys
 
     def dispatcher(self, method_to_call):
         return lambda: threading.Thread(target=self.__dispatch_method__, args=(method_to_call, )).start()
@@ -52,32 +56,33 @@ class NalandaDownloaderController:
             downloads = {}
             for course in selected_courses:
                 self.nalanda_downloader.update_status("Fetching Attachments from {}".format(course.title))
-                attachment_urls = self.nalanda_session.get_all_attachments(course.course_id, from_announcements)
-                for folder_name in attachment_urls:
-                    if attachment_urls[folder_name]:
-                        downloads['{}/{}'.format(course.title, folder_name)] = attachment_urls[folder_name]
+                filenames_to_attachment_urls = \
+                    self.nalanda_session.get_all_attachments(course.course_id, from_announcements)
+                for file_path in filenames_to_attachment_urls:
+                    downloads['{}/{}'.format(course.title, file_path)] = filenames_to_attachment_urls[file_path]
             if not downloads:
                 self.nalanda_downloader.update_status("Nothing to download.")
             else:
                 self.downloads = downloads
-                self.downloads_folders = list(downloads.keys())
-                self.nalanda_downloader.update_downloads(self.downloads_folders)
-                self.nalanda_downloader.update_status("{} topics to download.".format(len(self.downloads_folders)))
+                self.downloads_files = list(downloads.keys())
+                self.nalanda_downloader.update_downloads(self.downloads_files)
+                self.nalanda_downloader.update_status("{} files to download.".format(len(self.downloads_files)))
 
     def __handle_download_attachments(self):
         indices = self.nalanda_downloader.downloads_selected()
         if not indices:
             self.nalanda_downloader.update_status("No downloads selected.")
         else:
-            selected_downloads = list(map(lambda index: self.downloads_folders[index], indices))
-            file_count = 0
-            folder_count = len(selected_downloads)
-            for index, folder_name in enumerate(selected_downloads, 1):
-                for attachment_url in self.downloads[folder_name]:
-                    filename = \
-                        self.nalanda_session.download_attachment(attachment_url=attachment_url, filepath=folder_name)
-                    if filename:
-                        self.nalanda_downloader.update_status('Downloaded {} to\n{}'.format(filename, folder_name))
-                        file_count += 1
-                self.nalanda_downloader.update_status('Downloaded {}/{} folders'.format(index, folder_count))
-            self.nalanda_downloader.update_status('Downloaded {} files into {} folders.'.format(file_count, folder_count))
+            selected_files = list(map(lambda index: self.downloads_files[index], indices))
+            file_count = len(selected_files)
+
+            with ThreadPoolExecutor(max_workers=MAX_DOWNLOAD_WORKERS) as executor:
+                for file_to_download in selected_files:
+                    attachment_url = self.downloads[file_to_download]
+                    folder_name = dirname(file_to_download)
+                    executor.submit(self.__notify_on_download_completion, attachment_url, folder_name)
+            self.nalanda_downloader.update_status('Downloaded {} files'.format(file_count))
+
+    def __notify_on_download_completion(self, attachment_url, folder_name):
+        filename = self.nalanda_session.download_attachment(attachment_url=attachment_url, filepath=folder_name)
+        self.nalanda_downloader.update_status('Downloaded {} to\n{}'.format(filename, folder_name))
