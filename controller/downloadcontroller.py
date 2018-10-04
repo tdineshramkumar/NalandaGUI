@@ -2,8 +2,9 @@ import threading
 from view.nalandadownloader import NalandaDownloader
 from model.nalanda import NalandaSession
 from os.path import dirname
-from concurrent.futures import ThreadPoolExecutor
+from concurrent.futures import ThreadPoolExecutor, as_completed
 
+MAX_COURSES_WORKERS = 5
 MAX_DOWNLOAD_WORKERS = 5
 
 
@@ -54,6 +55,16 @@ class NalandaDownloaderController:
             from_announcements = self.nalanda_downloader.is_announcements_selected()
             selected_courses = map(lambda index: self.courses[index], indices)
             downloads = {}
+            with ThreadPoolExecutor(max_workers=MAX_COURSES_WORKERS) as executor:
+                future_to_course = {
+                    executor.submit(self.nalanda_session.get_all_attachments, course.course_id, from_announcements): course
+                    for course in selected_courses}
+                for future in as_completed(future_to_course):
+                    course = future_to_course[future]
+                    self.nalanda_downloader.update_status("Fetched Attachments from {}".format(course.title))
+                    filenames_to_attachment_urls = future.result()
+                    for file_path in filenames_to_attachment_urls:
+                        downloads['{}/{}'.format(course.title, file_path)] = filenames_to_attachment_urls[file_path]
             for course in selected_courses:
                 self.nalanda_downloader.update_status("Fetching Attachments from {}".format(course.title))
                 filenames_to_attachment_urls = \
