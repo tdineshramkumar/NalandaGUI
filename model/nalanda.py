@@ -29,11 +29,10 @@ class NalandaSession:
     def nalanda_login(self, username, password):
         assert isinstance(username, str)
         assert isinstance(password, str)
-        nalanda_login_page = self.session.get(url=self.NALANDA_LOGIN_URL).text
-        action, params = extract_first_form(nalanda_login_page)
-        params['username'] = username
-        params['passowrd'] = password
-        response_html = self.session.post(url=action, data=params).text
+        # nalanda_login_page = self.session.get(url=self.NALANDA_LOGIN_URL).text
+        # action, _ = extract_first_form(nalanda_login_page)
+        params = {'username': username, 'password': password}
+        response_html = self.session.post(url=self.NALANDA_LOGIN_URL, data=params, allow_redirects=True).text
         action, params = extract_first_form(response_html)
         if action == self.NALANDA_LOGIN_URL:
             # login failed
