@@ -2,7 +2,7 @@ from tkinter import *
 import os   # to check if file exists
 from PIL import ImageTk, Image  # to view captcha
 from view.basicapplicationgui import BasicApplicationGUI
-
+from tkinter.ttk import Notebook
 
 class AuthenticationWindow(BasicApplicationGUI):
     """
@@ -16,18 +16,34 @@ class AuthenticationWindow(BasicApplicationGUI):
         self.captcha_enabled = False
 
     def __initialize_gui__(self):
-        Label(self.window, text='Username:').grid(row=0, sticky='W')
-        Label(self.window, text='Password:').grid(row=1, sticky='W')
-        Entry(self.window, textvariable=self.username_variable, bd=5, relief=SUNKEN, width=30)\
+        notebook = Notebook(self.window)
+        notebook.grid(row=0, column=0, rowspan=14, columnspan=4, sticky=EW)
+        gmail_frame, nalanda_frame = Frame(notebook), Frame(notebook)
+        notebook.add(gmail_frame, text='Gmail')
+        notebook.add(nalanda_frame, text='Nalanda')
+        # GMAIL
+        Label(gmail_frame, text='Username:').grid(row=0, sticky='W')
+        Label(gmail_frame, text='Password:').grid(row=1, sticky='W')
+        Entry(gmail_frame, textvariable=self.username_variable, bd=5, relief=SUNKEN, width=30)\
             .grid(row=0, columnspan=3, column=1)
-        Entry(self.window, textvariable=self.password_variable, show='*', bd=5, relief=SUNKEN, width=30)\
+        Entry(gmail_frame, textvariable=self.password_variable, show='*', bd=5, relief=SUNKEN, width=30)\
             .grid(row=1, columnspan=3, column=1)
-        self.submit_button = Button(self.window, text='Submit', bd=5, relief=RAISED, width=10)
-        self.submit_button.grid(row=10, sticky=E, columnspan=4)
+        self.submit_gmail_button = Button(gmail_frame, text='Submit', bd=5, relief=RAISED, width=10)
+        self.submit_gmail_button.grid(row=10, sticky=E, columnspan=4)
 
-        self.captcha_image = Label(self.window, bd=5, relief=RAISED)
-        self.captcha_entry = Entry(self.window, textvariable=self.captcha_variable,  bd=5, relief=SUNKEN)
-        self.captcha_button = Button(self.window, text='[R]', bd=2, relief=RAISED)
+        self.captcha_image = Label(gmail_frame, bd=5, relief=RAISED)
+        self.captcha_entry = Entry(gmail_frame, textvariable=self.captcha_variable, bd=5, relief=SUNKEN)
+        self.captcha_button = Button(gmail_frame, text='[R]', bd=2, relief=RAISED)
+
+        # NALANDA
+        Label(nalanda_frame, text='Username:').grid(row=0, sticky='W')
+        Label(nalanda_frame, text='Password:').grid(row=1, sticky='W')
+        Entry(nalanda_frame, textvariable=self.username_variable, bd=5, relief=SUNKEN, width=30) \
+            .grid(row=0, columnspan=3, column=1)
+        Entry(nalanda_frame, textvariable=self.password_variable, show='*', bd=5, relief=SUNKEN, width=30) \
+            .grid(row=1, columnspan=3, column=1)
+        self.submit_nalanda_button = Button(nalanda_frame, text='Submit', bd=5, relief=RAISED, width=10)
+        self.submit_nalanda_button.grid(row=10, sticky=E, columnspan=4)
 
         # Attach the status bar
         self.busy_status.grid(row=15, column=3, sticky=EW)
@@ -53,13 +69,16 @@ class AuthenticationWindow(BasicApplicationGUI):
         self.captcha_button.grid_forget()
         self.captcha_entry.grid_forget()
 
-
     def is_captcha_enabled(self):
         return self.captcha_enabled
 
-    def set_submit_button_command(self, action):
+    def set_submit_gmail_button_command(self, action):
         assert callable(action)
-        self.submit_button.configure(command=action)
+        self.submit_gmail_button.configure(command=action)
+
+    def set_submit_nalanda_button_command(self, action):
+        assert callable(action)
+        self.submit_nalanda_button.configure(command=action)
 
     def set_captcha_button_command(self, action):
         assert callable(action)

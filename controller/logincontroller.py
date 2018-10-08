@@ -11,8 +11,9 @@ class LoginController:
         self.login_window = login_window
         self.lock = threading.RLock()
         self.threads = list()
-        self.login_window.set_submit_button_command(action=self.dispatcher(self.__handle_login))
-        self.login_window.set_captcha_button_command(action=self.dispatcher(self.__handle_login))
+        self.login_window.set_submit_gmail_button_command(action=self.dispatcher(self.__handle_gmail_login))
+        self.login_window.set_submit_nalanda_button_command(action=self.dispatcher(self.__handle_nalanda_login))
+        self.login_window.set_captcha_button_command(action=self.dispatcher(self.__handle_gmail_login))
         self.login_window.start_mainloop()
         for thread in self.threads:
             thread.join()
@@ -37,7 +38,22 @@ class LoginController:
         else:
             self.login_window.update_status('Please Wait till Action is Completed.')
 
-    def __handle_login(self):
+    def __handle_nalanda_login(self):
+
+        username = self.login_window.get_username()
+        password = self.login_window.get_password()
+        if not username:
+            self.login_window.update_status('Enter Username.')
+            return
+        if not password:
+            self.login_window.update_status('Enter Password.')
+            return
+        if self.google_session.nalanda_session.nalanda_login(username=username, password=password):
+            self.login_window.__close__()
+        else:
+            self.login_window.update_status('Invalid Login Details.')
+
+    def __handle_gmail_login(self):
         username = self.login_window.get_username()
         password = self.login_window.get_password()
         if not username:

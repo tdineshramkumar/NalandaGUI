@@ -5,6 +5,7 @@ from model.session import Session
 # Needed to download files
 import os
 import re
+from model.utilities import extract_first_form
 
 
 class NalandaSession:
@@ -24,6 +25,20 @@ class NalandaSession:
         soup = BeautifulSoup(nalanda_login_page, 'html.parser')
         oauth_url = soup.find('a', class_="btn").get('href')
         return oauth_url
+
+    def nalanda_login(self, username, password):
+        assert isinstance(username, str)
+        assert isinstance(password, str)
+        nalanda_login_page = self.session.get(url=self.NALANDA_LOGIN_URL).text
+        action, params = extract_first_form(nalanda_login_page)
+        params['username'] = username
+        params['passowrd'] = password
+        response_html = self.session.post(url=action, data=params).text
+        action, params = extract_first_form(response_html)
+        if action == self.NALANDA_LOGIN_URL:
+            # login failed
+            return False
+        return True
 
     def registered_courses(self):
         nalanda_main_page = self.session.get(self.NALANDA_HOME_URL).text
